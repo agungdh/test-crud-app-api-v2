@@ -24,11 +24,16 @@ quarkus:
         level: INFO
   http:
     port: 8080
-    cors: true
-    cors.origins: http://localhost:4200
-    cors.methods: GET,POST,PUT,DELETE,OPTIONS
-    cors.headers: Content-Type,Authorization,X-Requested-With,Accept,Origin
-    cors.exposed-headers: Content-Type,Authorization
+    cors:
+      enabled: true
+      origins: http://localhost:4200
+      methods: GET,POST,PUT,DELETE,OPTIONS
+      headers: Content-Type,Authorization,X-Requested-With,Accept,Origin
+      exposed-headers: Content-Type,Authorization
+      access-control-allow-credentials: true
+  redis:
+    hosts: redis://localhost:6379
+    password: admin
   smallrye-openapi:
     info-title: Test CRUD API
     info-version: 0.0.8
@@ -37,5 +42,13 @@ quarkus:
     always-include: true
   native:
     additional-build-args: --initialize-at-run-time=com.password4j.AlgorithmFinder
+app:
+  auth:
+    token-ttl-seconds: 604800
+    cookie-name: access_token
+    cookie-secure: false
+    cookie-same-site: Lax
+    cookie-path: /
+    cookie-max-age-seconds: 604800
 
 # Virtual threads enabled via @RunOnVirtualThread - no extra config needed (defaults are sufficient)
