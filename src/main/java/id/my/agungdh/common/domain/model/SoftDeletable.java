@@ -1,4 +1,4 @@
-package id.my.agungdh.entity;
+package id.my.agungdh.common.domain.model;
 
 import java.time.Instant;
 

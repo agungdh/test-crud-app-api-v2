@@ -1,5 +1,6 @@
-package id.my.agungdh.entity;
+package id.my.agungdh.user.domain.model;
 
+import id.my.agungdh.common.domain.model.BaseEntity;
 import jakarta.persistence.*;
 
 @Entity

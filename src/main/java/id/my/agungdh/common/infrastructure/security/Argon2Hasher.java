@@ -1,4 +1,4 @@
-package id.my.agungdh.util;
+package id.my.agungdh.common.infrastructure.security;
 
 import com.password4j.Argon2Function;
 import com.password4j.Password;

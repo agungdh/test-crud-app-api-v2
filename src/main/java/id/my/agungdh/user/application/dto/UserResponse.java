@@ -1,4 +1,4 @@
-package id.my.agungdh.dto;
+package id.my.agungdh.user.application.dto;
 
 import org.eclipse.microprofile.openapi.annotations.media.Schema;
 

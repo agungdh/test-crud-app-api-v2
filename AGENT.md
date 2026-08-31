@@ -1,7 +1,7 @@
 # AGENT Guidelines — test-crud-app-api-v2
 
 > Stack: Quarkus 3.39.1 + Java 25 + Gradle Kotlin DSL + PostgreSQL 18 (murni, tanpa ORM berat).
-> Tujuan: Efisiensi Postgres maksimal, audit konsisten, soft delete, public identifier via UUID v4, DTO immutable via `record`, dan I/O bound via Virtual Thread.
+> Tujuan: Efisiensi Postgres maksimal, audit konsisten, soft delete, public identifier via UUID v4, DTO immutable via `record`, I/O bound via Virtual Thread, dan **Clean Architecture per modul (modular monolith)**.
 
 ---
 
@@ -225,7 +225,7 @@ UUID newUuid = jdbc.queryForObject(
 *   Validasi pakai `jakarta.validation` di komponen `record`.
 
 ```java
-package id.my.agungdh.dto;
+package id.my.agungdh.product.application.dto; // per-modul: id.my.agungdh.{modul}.application.dto
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -250,6 +250,7 @@ public record ProductResponse(
     UUID categoryUuid
 ) {}
 
+// Common DTO: id.my.agungdh.common.application.dto.PageResponse
 public record PageResponse<T>(
     java.util.List<T> data,
     String nextCursor,
@@ -283,7 +284,7 @@ Project ini I/O bound (Postgres, Valkey, Minio).
 
 *   **WAJIB** `@RunOnVirtualThread` di semua `Resource` (`@Path`) dan `Service` yang melakukan I/O.
     ```java
-    package id.my.agungdh;
+    package id.my.agungdh.product.presentation.rest; // per-modul: id.my.agungdh.{modul}.presentation.rest
 
     import io.smallrye.common.annotation.RunOnVirtualThread;
     import jakarta.ws.rs.*;
@@ -302,6 +303,8 @@ Project ini I/O bound (Postgres, Valkey, Minio).
     ```
 *   `Service` juga `@RunOnVirtualThread` jika dipanggil tanpa `Resource` (mis. scheduler).
     ```java
+    package id.my.agungdh.product.application.service;
+
     @ApplicationScoped
     @RunOnVirtualThread
     public class ProductService { ... }
@@ -475,21 +478,42 @@ RETURNING uuid, updated_at;
 
 ---
 
-## 11. Struktur Project (Quarkus)
+## 11. Struktur Project — Clean Architecture Per Modul (Modular Monolith)
+
+> **Prinsip:** Package by feature, bukan by layer. Tiap modul punya 4 layer Clean Arch: `domain` (enterprise) → `application` (use-case) → `infrastructure` (framework) → `presentation` (delivery). Dependency mengarah ke dalam (domain tidak depend ke luar).
 
 ```
 src/main/java/id/my/agungdh/
-├── dto/           # record Request/Response
-├── entity/        # class Row/Entity (internal id)
-├── repository/    # JDBC/JOOQ/DB access, whereActive() helper
-├── service/       # @RunOnVirtualThread, @ApplicationScoped, resolve uuid->id
-├── resource/      # @Path, @RunOnVirtualThread, validasi, return DTO
-└── filter/        # Security filter isi actorId untuk audit *_by
+├── common/                          # Shared Kernel — dipakai semua modul
+│   ├── domain/model/                # BaseEntity, SoftDeletable
+│   ├── application/dto/             # PageResponse<T>
+│   └── infrastructure/
+│       ├── persistence/BaseRepository.java  # Panache + withTrashed()/withoutTrashed()
+│       ├── filter/SoftDeleteFilter.java     # @Provider enable softDeleteFilter per-request
+│       └── security/Argon2Hasher.java       # hashing (ex util/)
+│
+└── user/                            # User Bounded Context (contoh modul)
+    ├── domain/model/                # User extends BaseEntity (@Entity)
+    ├── application/
+    │   ├── dto/                     # UserCreateRequest, UserUpdateRequest, UserResponse (record)
+    │   └── service/UserService.java # @ApplicationScoped @RunOnVirtualThread — usecase
+    ├── infrastructure/persistence/  # UserRepository implements BaseRepository<User>
+    └── presentation/rest/           # UserResource.java @Path @RunOnVirtualThread
+    # tambah modul baru: product/, category/, order/ dengan pola sama
 
 src/main/resources/
 ├── application.yml
-└── db/migration/  # V1__init.sql, V2__add_*.sql
+└── db/migration/                    # V1__init.sql, V2__seed_admin.java
 ```
+
+**Dependency rule:**
+- `domain` tidak depend ke layer lain.
+- `application` depend ke `domain` saja.
+- `infrastructure` depend ke `domain` + `application`.
+- `presentation` depend ke `application`.
+- Antar modul (`user` ↔ `product`) dilarang import langsung; komunikasi via `application/service` interface atau event.
+
+**Penamaan package:** `id.my.agungdh.{modul}.{layer}.{sub}` contoh `id.my.agungdh.user.application.dto`, `id.my.agungdh.common.infrastructure.persistence`.
 
 ---
 
@@ -504,6 +528,7 @@ src/main/resources/
 *   [ ] Semua `WHERE`/`JOIN` filter `deleted_at IS NULL`?
 *   [ ] `uuid` lookup pakai `= :uuid` (hash index terpakai)?
 *   [ ] `Resource`/`Service` I/O pakai `@RunOnVirtualThread`?
+*   [ ] Struktur per modul Clean Arch dipatuhi? (`domain` → `application` → `infrastructure`/`presentation`, package `id.my.agungdh.{modul}.*`, `common` untuk shared kernel)?
 *   [ ] `EXPLAIN ANALYZE` dilampirkan untuk query baru?
 *   [ ] Migrasi `V__*.sql` ada dan `flyway migrate` sukses di local?
 
@@ -535,7 +560,9 @@ quarkus:
 ## 14. Referensi
 
 *   Postgres 18 Docs: `GENERATED AS IDENTITY`, `CREATE INDEX ... USING hash`, `Partial Indexes`.
-*   `src/main/java/id/my/agungdh/GreetingResource.java:10` — contoh `@RunOnVirtualThread`.
+*   `src/main/java/id/my/agungdh/user/presentation/rest/UserResource.java:22` — contoh `@RunOnVirtualThread` + Clean Arch per modul.
+*   `src/main/java/id/my/agungdh/common/domain/model/BaseEntity.java:10` — 6 kolom audit + `@Filter(softDeleteFilter)`.
+*   `src/main/java/id/my/agungdh/common/infrastructure/persistence/BaseRepository.java:7` — `withTrashed()` / `withoutTrashed()`.
 *   `docker-compose.yml:2-16` — Postgres 18 service.
 
 > Update guideline ini jika ada keputusan baru (mis. tambah `pg_trgm`, ganti `hash`→`btree` untuk UUID). Jangan ubah DDL yang sudah migrate tanpa buat `V__` baru.

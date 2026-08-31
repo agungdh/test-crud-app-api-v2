@@ -1,6 +1,7 @@
-package id.my.agungdh.repository;
+package id.my.agungdh.user.infrastructure.persistence;
 
-import id.my.agungdh.entity.User;
+import id.my.agungdh.common.infrastructure.persistence.BaseRepository;
+import id.my.agungdh.user.domain.model.User;
 import jakarta.enterprise.context.ApplicationScoped;
 
 import java.util.List;

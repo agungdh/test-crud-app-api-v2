@@ -1,4 +1,4 @@
-package id.my.agungdh.dto;
+package id.my.agungdh.common.application.dto;
 
 import java.util.List;
 

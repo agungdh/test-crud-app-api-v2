@@ -1,10 +1,10 @@
-package id.my.agungdh.resource;
+package id.my.agungdh.user.presentation.rest;
 
-import id.my.agungdh.dto.PageResponse;
-import id.my.agungdh.dto.UserCreateRequest;
-import id.my.agungdh.dto.UserResponse;
-import id.my.agungdh.dto.UserUpdateRequest;
-import id.my.agungdh.service.UserService;
+import id.my.agungdh.common.application.dto.PageResponse;
+import id.my.agungdh.user.application.dto.UserCreateRequest;
+import id.my.agungdh.user.application.dto.UserResponse;
+import id.my.agungdh.user.application.dto.UserUpdateRequest;
+import id.my.agungdh.user.application.service.UserService;
 import io.smallrye.common.annotation.RunOnVirtualThread;
 import jakarta.inject.Inject;
 import jakarta.validation.Valid;

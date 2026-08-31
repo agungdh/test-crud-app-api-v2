@@ -1,4 +1,4 @@
-package id.my.agungdh.filter;
+package id.my.agungdh.common.infrastructure.filter;
 
 import jakarta.annotation.Priority;
 import jakarta.enterprise.context.ApplicationScoped;

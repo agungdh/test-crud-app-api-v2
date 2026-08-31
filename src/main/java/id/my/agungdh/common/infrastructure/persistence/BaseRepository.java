@@ -1,6 +1,6 @@
-package id.my.agungdh.repository;
+package id.my.agungdh.common.infrastructure.persistence;
 
-import id.my.agungdh.entity.BaseEntity;
+import id.my.agungdh.common.domain.model.BaseEntity;
 import io.quarkus.hibernate.orm.panache.PanacheRepositoryBase;
 import org.hibernate.Session;
 
