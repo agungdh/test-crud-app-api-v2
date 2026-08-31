@@ -61,12 +61,26 @@ public class UserService {
     }
 
     public UserResponse findByUuid(UUID uuid) {
-        User user = repository.findByUuid(uuid)
-                .orElseThrow(() -> new NotFoundException("User not found"));
+        return findByUuid(uuid, false);
+    }
+
+    public UserResponse findByUuid(UUID uuid, boolean includeDeleted) {
+        User user;
+        if (includeDeleted) {
+            user = repository.findByUuidIncludeDeleted(uuid)
+                    .orElseThrow(() -> new NotFoundException("User not found"));
+        } else {
+            user = repository.findByUuid(uuid)
+                    .orElseThrow(() -> new NotFoundException("User not found"));
+        }
         return toResponse(user);
     }
 
     public PageResponse<UserResponse> list(int limit, String cursor) {
+        return list(limit, cursor, false);
+    }
+
+    public PageResponse<UserResponse> list(int limit, String cursor, boolean includeDeleted) {
         int pageSize = Math.min(Math.max(limit, 1), 100);
         Instant cursorCreatedAt = null;
         Long cursorId = null;
@@ -83,7 +97,9 @@ public class UserService {
             }
         }
 
-        List<User> rows = repository.findAllActive(pageSize + 1, cursorCreatedAt, cursorId);
+        List<User> rows = includeDeleted
+                ? repository.findAllIncludingDeleted(pageSize + 1, cursorCreatedAt, cursorId)
+                : repository.findAllActive(pageSize + 1, cursorCreatedAt, cursorId);
         boolean hasNext = rows.size() > pageSize;
         List<User> pageRows = hasNext ? rows.subList(0, pageSize) : rows;
 

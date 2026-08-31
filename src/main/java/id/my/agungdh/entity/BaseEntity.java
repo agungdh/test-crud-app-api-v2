@@ -2,12 +2,14 @@ package id.my.agungdh.entity;
 
 import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 import jakarta.persistence.*;
-import org.hibernate.annotations.SQLRestriction;
+import org.hibernate.annotations.Filter;
+import org.hibernate.annotations.FilterDef;
 import java.time.Instant;
 import java.util.UUID;
 
 @MappedSuperclass
-@SQLRestriction("deleted_at IS NULL")
+@FilterDef(name = "softDeleteFilter", defaultCondition = "deleted_at IS NULL")
+@Filter(name = "softDeleteFilter")
 public abstract class BaseEntity extends PanacheEntityBase implements SoftDeletable {
 
     @Id
