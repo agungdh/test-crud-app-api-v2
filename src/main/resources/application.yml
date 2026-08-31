@@ -1,12 +1,2 @@
-quarkus:
-  http:
-    port: 8080
-  # Virtual Threads configuration
-  # REST endpoints annotated with @RunOnVirtualThread will run on virtual threads (Java 21+)
-  virtual-threads:
-    name-prefix: quarkus-virtual-thread-
-
-# Example: quarkus.log.level etc can be added here
-# quarkus:
-#   log:
-#     level: INFO
+# Quarkus configuration (YAML)
+# Virtual threads enabled via @RunOnVirtualThread - no extra config needed (defaults are sufficient)
