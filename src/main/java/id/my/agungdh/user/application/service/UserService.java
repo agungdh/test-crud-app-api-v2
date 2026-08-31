@@ -143,18 +143,15 @@ public class UserService {
         User user = repository.findByUuid(uuid)
                 .orElseThrow(() -> new NotFoundException("User not found"));
 
-        if (req.username() != null) {
-            repository.findByUsername(req.username()).ifPresent(existing -> {
-                if (!existing.uuid.equals(uuid)) {
-                    throw new WebApplicationException("Username already exists", Response.Status.CONFLICT);
-                }
-            });
-        }
-        // MapStruct akan apply field non-null (username, name); password di-handle manual
+        // PUT = full update, semua field wajib — validasi sudah di-handle @Valid
+        repository.findByUsername(req.username()).ifPresent(existing -> {
+            if (!existing.uuid.equals(uuid)) {
+                throw new WebApplicationException("Username already exists", Response.Status.CONFLICT);
+            }
+        });
+        // MapStruct apply field (username, name); password di-handle manual
         mapper.updateFromRequest(req, user);
-        if (req.password() != null && !req.password().isBlank()) {
-            user.password = Argon2Hasher.hash(req.password());
-        }
+        user.password = Argon2Hasher.hash(req.password());
         // updatedAt handled by @PreUpdate, but force if needed
         try {
             repository.persist(user);

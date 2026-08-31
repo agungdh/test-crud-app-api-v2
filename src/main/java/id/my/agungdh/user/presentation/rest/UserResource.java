@@ -72,15 +72,12 @@ public class UserResource {
 
     @PUT
     @Path("/{uuid}")
-    @Operation(summary = "Update user", description = "At least one field must be provided")
+    @Operation(summary = "Update user", description = "Full update (PUT) - all fields required")
     @APIResponse(responseCode = "200", description = "User updated",
             content = @Content(schema = @Schema(implementation = UserResponse.class)))
     @APIResponse(responseCode = "400", description = "Validation error")
     @APIResponse(responseCode = "404", description = "User not found")
     public UserResponse update(@Parameter(description = "User UUID") @PathParam("uuid") UUID uuid, @Valid UserUpdateRequest req) {
-        if (req.username() == null && req.password() == null && req.name() == null) {
-            throw new BadRequestException("At least one field must be provided");
-        }
         return userService.update(uuid, req);
     }
 
