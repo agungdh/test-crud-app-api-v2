@@ -1,2 +1,24 @@
 # Quarkus configuration (YAML)
+quarkus:
+  datasource:
+    db-kind: postgresql
+    username: admin
+    password: admin
+    jdbc:
+      url: jdbc:postgresql://localhost:5432/crud
+      max-size: 50
+      min-size: 5
+  flyway:
+    migrate-at-start: true
+    locations: db/migration
+  jackson:
+    property-naming-strategy: SNAKE_CASE
+    write-dates-as-timestamps: false
+  log:
+    category:
+      "org.flywaydb":
+        level: INFO
+  http:
+    port: 8080
+
 # Virtual threads enabled via @RunOnVirtualThread - no extra config needed (defaults are sufficient)
