@@ -171,24 +171,23 @@ Internal tetap `BIGINT` (`id`/`category_id`), eksternal `UUID`:
 
 ---
 
-## 6. DTO Rule — `id`/`fk_id` Tidak Pernah Expose
+## 6. DTO Rule — `id`/`fk_id` & Kolom Audit Tidak Pernah Expose
 
 ### 6.1 Prinsip
 
-*   **Entity/Record internal:** `id`, `categoryId` (`BIGINT`).
-*   **DTO/record publik:** `uuid`, `categoryUuid` (`UUID`).
-*   Client tidak pernah kirim/terima `id` numeric.
+*   **Entity/Record internal:** `id`, `categoryId` (`BIGINT`) + 6 kolom audit (`createdAt`, `updatedAt`, `deletedAt`, `*_by`).
+*   **DTO/record publik:** `uuid`, `categoryUuid` (`UUID`) — **TANPA kolom audit**.
+*   Client tidak pernah kirim/terima `id` numeric maupun `created_at`/`updated_at`/`deleted_at`/`*_by`. Audit hanya untuk internal DB/service, bukan untuk API response.
 
 ### 6.2 Mapping
 
 **Read:**
 ```sql
+-- JANGAN select kolom audit (created_at, updated_at, deleted_at, *_by) untuk DTO
 SELECT p.uuid,
        p.name,
        p.sku,
-       c.uuid AS category_uuid,
-       p.created_at,
-       p.updated_at
+       c.uuid AS category_uuid
 FROM products p
 JOIN categories c ON c.id = p.category_id AND c.deleted_at IS NULL
 WHERE p.deleted_at IS NULL
@@ -213,6 +212,7 @@ UUID newUuid = jdbc.queryForObject(
 
 *   Jika `fk_uuid` tidak ditemukan / sudah soft delete → `404 Not Found` (jangan `500`).
 *   Jangan pernah `SELECT id` lalu expose di JSON.
+*   Jangan pernah expose kolom audit (`created_at`, `updated_at`, `deleted_at`, `created_by`, `updated_by`, `deleted_by`) di DTO Response.
 
 ---
 
@@ -230,7 +230,6 @@ package id.my.agungdh.dto;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import java.util.UUID;
-import java.time.Instant;
 
 public record ProductCreateRequest(
     @NotBlank String name,
@@ -243,13 +242,12 @@ public record ProductUpdateRequest(
     @NotNull UUID categoryUuid
 ) {}
 
+// Response TANPA kolom audit (createdAt, updatedAt, deletedAt, *_by) — audit hanya internal di entity
 public record ProductResponse(
     UUID uuid,
     String name,
     String sku,
-    UUID categoryUuid,
-    Instant createdAt,
-    Instant updatedAt
+    UUID categoryUuid
 ) {}
 
 public record PageResponse<T>(
@@ -271,7 +269,7 @@ Gunakan manual mapper atau `MapStruct` dengan `componentModel="cdi"`. Jangan pak
 
 ```java
 public static ProductResponse toResponse(ProductRow row, UUID categoryUuid) {
-    return new ProductResponse(row.uuid(), row.name(), row.sku(), categoryUuid, row.createdAt(), row.updatedAt());
+    return new ProductResponse(row.uuid(), row.name(), row.sku(), categoryUuid);
 }
 ```
 
@@ -495,7 +493,7 @@ src/main/resources/
 *   [ ] Semua `UNIQUE` pakai `WHERE deleted_at IS NULL`?
 *   [ ] Kolom `*_by` = `BIGINT NULL` tanpa `FOREIGN KEY`?
 *   [ ] Tidak ada `SELECT *` atau `OFFSET` besar?
-*   [ ] DTO pakai `record` dan tidak expose `id`/`fk_id`?
+*   [ ] DTO pakai `record` dan tidak expose `id`/`fk_id` maupun kolom audit (`createdAt`, `updatedAt`, `deletedAt`, `*_by`)?
 *   [ ] Semua `WHERE`/`JOIN` filter `deleted_at IS NULL`?
 *   [ ] `uuid` lookup pakai `= :uuid` (hash index terpakai)?
 *   [ ] `Resource`/`Service` I/O pakai `@RunOnVirtualThread`?

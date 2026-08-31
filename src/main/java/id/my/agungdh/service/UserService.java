@@ -29,7 +29,7 @@ public class UserService {
     UserRepository repository;
 
     private UserResponse toResponse(User u) {
-        return new UserResponse(u.uuid, u.username, u.name, u.createdAt, u.updatedAt);
+        return new UserResponse(u.uuid, u.username, u.name);
     }
 
     @Transactional
