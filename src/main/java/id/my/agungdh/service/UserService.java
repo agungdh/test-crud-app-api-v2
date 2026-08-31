@@ -14,6 +14,7 @@ import jakarta.transaction.Transactional;
 import jakarta.ws.rs.NotFoundException;
 import jakarta.ws.rs.WebApplicationException;
 import jakarta.ws.rs.core.Response;
+import org.jboss.logging.Logger;
 
 import java.time.Instant;
 import java.util.List;
@@ -22,6 +23,8 @@ import java.util.UUID;
 @ApplicationScoped
 @RunOnVirtualThread
 public class UserService {
+
+    private static final Logger LOG = Logger.getLogger(UserService.class);
 
     @Inject
     UserRepository repository;
@@ -81,10 +84,14 @@ public class UserService {
             try {
                 cursorUuid = UUID.fromString(cursor);
             } catch (IllegalArgumentException ex) {
+                LOG.warnf("Invalid cursor format: %s", cursor);
                 throw new WebApplicationException("Invalid cursor", Response.Status.BAD_REQUEST);
             }
             User cursorUser = repository.findByUuidIncludeDeleted(cursorUuid)
-                    .orElseThrow(() -> new WebApplicationException("Invalid cursor", Response.Status.BAD_REQUEST));
+                    .orElseThrow(() -> {
+                        LOG.warnf("Invalid cursor not found (including deleted): %s", cursor);
+                        return new WebApplicationException("Invalid cursor", Response.Status.BAD_REQUEST);
+                    });
             cursorId = cursorUser.id;
         }
         List<User> rows = repository.findAllIncludingDeleted(pageSize + 1, cursorId);
@@ -108,10 +115,14 @@ public class UserService {
             try {
                 cursorUuid = UUID.fromString(cursor);
             } catch (IllegalArgumentException ex) {
+                LOG.warnf("Invalid cursor format: %s", cursor);
                 throw new WebApplicationException("Invalid cursor", Response.Status.BAD_REQUEST);
             }
             User cursorUser = repository.findByUuid(cursorUuid)
-                    .orElseThrow(() -> new WebApplicationException("Invalid cursor", Response.Status.BAD_REQUEST));
+                    .orElseThrow(() -> {
+                        LOG.warnf("Invalid cursor not found: %s", cursor);
+                        return new WebApplicationException("Invalid cursor", Response.Status.BAD_REQUEST);
+                    });
             cursorId = cursorUser.id;
         }
 
