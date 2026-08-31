@@ -15,10 +15,11 @@ jobs:
       - uses: actions/checkout@v7
 
       - name: Set up JDK 25
-        uses: actions/setup-java@v5
+        uses: actions/setup-java@v6
         with:
-          java-version: 25
           distribution: liberica-nik
+          java-version: '25'
+          java-package: jdk
           cache: gradle
 
       - name: Setup Gradle
