@@ -5,6 +5,7 @@ import id.my.agungdh.common.infrastructure.security.Argon2Hasher;
 import id.my.agungdh.user.application.dto.UserCreateRequest;
 import id.my.agungdh.user.application.dto.UserResponse;
 import id.my.agungdh.user.application.dto.UserUpdateRequest;
+import id.my.agungdh.user.application.mapper.UserMapper;
 import id.my.agungdh.user.domain.model.User;
 import id.my.agungdh.user.infrastructure.persistence.UserRepository;
 import io.smallrye.common.annotation.RunOnVirtualThread;
@@ -29,20 +30,16 @@ public class UserService {
     @Inject
     UserRepository repository;
 
-    private UserResponse toResponse(User u) {
-        return new UserResponse(u.uuid, u.username, u.name);
-    }
+    @Inject
+    UserMapper mapper;
 
     @Transactional
     public UserResponse create(UserCreateRequest req) {
         if (repository.findByUsername(req.username()).isPresent()) {
             throw new WebApplicationException("Username already exists", Response.Status.CONFLICT);
         }
-        String hash = Argon2Hasher.hash(req.password());
-        User user = new User();
-        user.username = req.username();
-        user.password = hash;
-        user.name = req.name();
+        User user = mapper.fromCreateRequest(req);
+        user.password = Argon2Hasher.hash(req.password());
         // uuid and timestamps handled by @PrePersist
         try {
             repository.persist(user);
@@ -58,20 +55,20 @@ public class UserService {
             }
             throw e;
         }
-        return toResponse(user);
+        return mapper.toResponse(user);
     }
 
     public UserResponse findByUuid(UUID uuid) {
         User user = repository.findByUuid(uuid)
                 .orElseThrow(() -> new NotFoundException("User not found"));
-        return toResponse(user);
+        return mapper.toResponse(user);
     }
 
     // khusus untuk endpoint yang include soft-deleted
     public UserResponse findByUuidIncludingDeleted(UUID uuid) {
         User user = repository.findByUuidIncludeDeleted(uuid)
                 .orElseThrow(() -> new NotFoundException("User not found"));
-        return toResponse(user);
+        return mapper.toResponse(user);
     }
 
     // khusus get all include soft-deleted — tanpa param boolean
@@ -97,7 +94,7 @@ public class UserService {
         List<User> rows = repository.findAllIncludingDeleted(pageSize + 1, cursorId);
         boolean hasNext = rows.size() > pageSize;
         List<User> pageRows = hasNext ? rows.subList(0, pageSize) : rows;
-        List<UserResponse> data = pageRows.stream().map(this::toResponse).toList();
+        List<UserResponse> data = mapper.toResponses(pageRows);
         String nextCursor = null;
         if (hasNext) {
             User last = pageRows.get(pageRows.size() - 1);
@@ -130,7 +127,7 @@ public class UserService {
         boolean hasNext = rows.size() > pageSize;
         List<User> pageRows = hasNext ? rows.subList(0, pageSize) : rows;
 
-        List<UserResponse> data = pageRows.stream().map(this::toResponse).toList();
+        List<UserResponse> data = mapper.toResponses(pageRows);
 
         String nextCursor = null;
         if (hasNext) {
@@ -152,13 +149,11 @@ public class UserService {
                     throw new WebApplicationException("Username already exists", Response.Status.CONFLICT);
                 }
             });
-            user.username = req.username();
         }
+        // MapStruct akan apply field non-null (username, name); password di-handle manual
+        mapper.updateFromRequest(req, user);
         if (req.password() != null && !req.password().isBlank()) {
             user.password = Argon2Hasher.hash(req.password());
-        }
-        if (req.name() != null) {
-            user.name = req.name();
         }
         // updatedAt handled by @PreUpdate, but force if needed
         try {
@@ -171,7 +166,7 @@ public class UserService {
             }
             throw e;
         }
-        return toResponse(user);
+        return mapper.toResponse(user);
     }
 
     @Transactional
