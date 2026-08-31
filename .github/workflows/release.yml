@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
   packages: write
 
 env:
@@ -45,6 +45,28 @@ jobs:
 
       - name: Build native executable
         run: ./gradlew build -Dquarkus.native.enabled=true -Dquarkus.package.jar.enabled=false -Dquarkus.native.additional-build-args=-march=${{ matrix.march }} -x test
+
+      - name: Prepare binary for release
+        run: |
+          ls -lh build/*-runner
+          BIN=$(ls build/*-runner | head -n1)
+          TAG="${{ github.event.release.tag_name || github.ref_name }}"
+          OUT="test-crud-app-api-v2-${TAG}-linux-${{ matrix.arch }}"
+          cp "$BIN" "build/$OUT"
+          chmod +x "build/$OUT"
+          ls -lh "build/$OUT"
+          echo "OUT=$OUT" >> $GITHUB_ENV
+          # also compress
+          gzip -k "build/$OUT"
+          ls -lh build/*.gz
+
+      - name: Upload binary to release
+        if: github.event_name == 'release'
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            build/test-crud-app-api-v2-*-linux-${{ matrix.arch }}
+            build/test-crud-app-api-v2-*-linux-${{ matrix.arch }}.gz
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
