@@ -23,7 +23,7 @@ public class UserRepository {
                 rs.getLong("id"),
                 (UUID) rs.getObject("uuid"),
                 rs.getString("username"),
-                rs.getString("password_hash"),
+                rs.getString("password"),
                 rs.getString("name"),
                 rs.getTimestamp("created_at").toInstant(),
                 rs.getObject("created_by") != null ? rs.getLong("created_by") : null,
@@ -36,7 +36,7 @@ public class UserRepository {
 
     public Optional<UserRow> findByUuid(UUID uuid) {
         String sql = """
-                SELECT id, uuid, username, password_hash, name,
+                SELECT id, uuid, username, password, name,
                        created_at, created_by, updated_at, updated_by, deleted_at, deleted_by
                 FROM users WHERE uuid = ? AND deleted_at IS NULL
                 """;
@@ -56,7 +56,7 @@ public class UserRepository {
 
     public Optional<UserRow> findByUsername(String username) {
         String sql = """
-                SELECT id, uuid, username, password_hash, name,
+                SELECT id, uuid, username, password, name,
                        created_at, created_by, updated_at, updated_by, deleted_at, deleted_by
                 FROM users WHERE username = ? AND deleted_at IS NULL
                 """;
@@ -76,9 +76,9 @@ public class UserRepository {
 
     public UserRow insert(String username, String passwordHash, String name, Long actorId) {
         String sql = """
-                INSERT INTO users (username, password_hash, name, created_by, updated_by)
+                INSERT INTO users (username, password, name, created_by, updated_by)
                 VALUES (?, ?, ?, ?, ?)
-                RETURNING id, uuid, username, password_hash, name,
+                RETURNING id, uuid, username, password, name,
                           created_at, created_by, updated_at, updated_by, deleted_at, deleted_by
                 """;
         try (Connection conn = dataSource.getConnection();
@@ -116,7 +116,7 @@ public class UserRepository {
             types.add(Types.VARCHAR);
         }
         if (passwordHash != null) {
-            sql.append("password_hash = ?, ");
+            sql.append("password = ?, ");
             params.add(passwordHash);
             types.add(Types.VARCHAR);
         }
@@ -135,7 +135,7 @@ public class UserRepository {
         }
         // Remove trailing ", "
         sql.setLength(sql.length() - 2);
-        sql.append(" WHERE uuid = ? AND deleted_at IS NULL RETURNING id, uuid, username, password_hash, name, created_at, created_by, updated_at, updated_by, deleted_at, deleted_by");
+        sql.append(" WHERE uuid = ? AND deleted_at IS NULL RETURNING id, uuid, username, password, name, created_at, created_by, updated_at, updated_by, deleted_at, deleted_by");
 
         try (Connection conn = dataSource.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql.toString())) {
@@ -189,7 +189,7 @@ public class UserRepository {
      */
     public List<UserRow> findAll(int limit, Instant cursorCreatedAt, Long cursorId) {
         StringBuilder sql = new StringBuilder("""
-                SELECT id, uuid, username, password_hash, name,
+                SELECT id, uuid, username, password, name,
                        created_at, created_by, updated_at, updated_by, deleted_at, deleted_by
                 FROM users WHERE deleted_at IS NULL
                 """);
@@ -221,7 +221,7 @@ public class UserRepository {
 
     public Optional<UserRow> findById(long id) {
         String sql = """
-                SELECT id, uuid, username, password_hash, name,
+                SELECT id, uuid, username, password, name,
                        created_at, created_by, updated_at, updated_by, deleted_at, deleted_by
                 FROM users WHERE id = ? AND deleted_at IS NULL
                 """;

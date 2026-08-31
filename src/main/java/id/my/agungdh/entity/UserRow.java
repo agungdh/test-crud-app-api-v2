@@ -7,7 +7,7 @@ public record UserRow(
         long id,
         UUID uuid,
         String username,
-        String passwordHash,
+        String password,
         String name,
         Instant createdAt,
         Long createdBy,

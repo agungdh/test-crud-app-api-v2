@@ -10,6 +10,12 @@ tasks.register<Exec>("composeDown") {
     commandLine("docker", "compose", "down")
 }
 
+tasks.register<Exec>("composeReset") {
+    group = "docker"
+    description = "Reset DB: down, remove volumes, up again (postgres, valkey, minio)"
+    commandLine("sh", "-c", "docker compose down -v && docker compose up -d --wait")
+}
+
 tasks.register<Exec>("composeLogs") {
     group = "docker"
     description = "Follow docker-compose logs"

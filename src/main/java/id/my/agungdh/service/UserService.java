@@ -12,7 +12,7 @@ import jakarta.inject.Inject;
 import jakarta.ws.rs.NotFoundException;
 import jakarta.ws.rs.WebApplicationException;
 import jakarta.ws.rs.core.Response;
-import org.mindrot.jbcrypt.BCrypt;
+import id.my.agungdh.util.Argon2Hasher;
 
 import java.nio.charset.StandardCharsets;
 import java.sql.SQLException;
@@ -37,7 +37,7 @@ public class UserService {
         if (repository.findByUsername(req.username()).isPresent()) {
             throw new WebApplicationException("Username already exists", Response.Status.CONFLICT);
         }
-        String hash = BCrypt.hashpw(req.password(), BCrypt.gensalt(12));
+        String hash = Argon2Hasher.hash(req.password());
         try {
             UserRow row = repository.insert(req.username(), hash, req.name(), null);
             return toResponse(row);
@@ -96,7 +96,7 @@ public class UserService {
     public UserResponse update(UUID uuid, UserUpdateRequest req) {
         String passwordHash = null;
         if (req.password() != null && !req.password().isBlank()) {
-            passwordHash = BCrypt.hashpw(req.password(), BCrypt.gensalt(12));
+            passwordHash = Argon2Hasher.hash(req.password());
         }
 
         // If username is being changed, check unique
