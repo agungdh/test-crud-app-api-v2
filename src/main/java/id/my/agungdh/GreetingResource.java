@@ -7,11 +7,11 @@ import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.MediaType;
 
 @Path("/hello")
+@RunOnVirtualThread
 public class GreetingResource {
 
     @GET
     @Produces(MediaType.TEXT_PLAIN)
-    @RunOnVirtualThread
     public String hello() {
         return "Hello from Quarkus REST";
     }
