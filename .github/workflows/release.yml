@@ -3,8 +3,6 @@ name: Release Native
 on:
   release:
     types: [published]
-  push:
-    tags: ['v*']
   workflow_dispatch:
 
 permissions:
