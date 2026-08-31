@@ -30,5 +30,7 @@ quarkus:
     info-description: CRUD User API with Quarkus
   swagger-ui:
     always-include: true
+  native:
+    additional-build-args: --initialize-at-run-time=com.password4j.AlgorithmFinder
 
 # Virtual threads enabled via @RunOnVirtualThread - no extra config needed (defaults are sufficient)
