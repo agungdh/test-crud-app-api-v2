@@ -3,7 +3,6 @@ package id.my.agungdh.repository;
 import id.my.agungdh.entity.User;
 import jakarta.enterprise.context.ApplicationScoped;
 
-import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -32,16 +31,15 @@ public class UserRepository implements BaseRepository<User> {
     }
 
     /**
-     * Keyset pagination: (createdAt, id) > (cursorCreatedAt, cursorId) ORDER BY createdAt ASC, id ASC
-     * Expanded to: createdAt > ?1 OR (createdAt = ?1 AND id > ?2)
+     * Keyset pagination: ORDER BY id DESC, cursor = UUID -> resolve to id, then id < cursorId
      */
-    public List<User> findAllActive(int limitPlusOne, Instant cursorCreatedAt, Long cursorId) {
+    public List<User> findAllActive(int limitPlusOne, Long cursorId) {
         enableSoftDeleteFilter();
-        if (cursorCreatedAt != null && cursorId != null) {
-            return find("(createdAt > ?1 or (createdAt = ?1 and id > ?2)) order by createdAt asc, id asc", cursorCreatedAt, cursorId)
+        if (cursorId != null) {
+            return find("id < ?1 order by id desc", cursorId)
                     .page(0, limitPlusOne).list();
         } else {
-            return find("order by createdAt asc, id asc")
+            return find("order by id desc")
                     .page(0, limitPlusOne).list();
         }
     }
@@ -56,29 +54,29 @@ public class UserRepository implements BaseRepository<User> {
         }
     }
 
-    public List<User> findAllIncludingDeleted(int limitPlusOne, Instant cursorCreatedAt, Long cursorId) {
+    public List<User> findAllIncludingDeleted(int limitPlusOne, Long cursorId) {
         withTrashed();
         try {
-            if (cursorCreatedAt != null && cursorId != null) {
-                return find("(createdAt > ?1 or (createdAt = ?1 and id > ?2)) order by createdAt asc, id asc", cursorCreatedAt, cursorId)
+            if (cursorId != null) {
+                return find("id < ?1 order by id desc", cursorId)
                         .page(0, limitPlusOne).list();
             } else {
-                return find("order by createdAt asc, id asc").page(0, limitPlusOne).list();
+                return find("order by id desc").page(0, limitPlusOne).list();
             }
         } finally {
             withoutTrashed();
         }
     }
 
-    public List<User> onlyTrashed(int limitPlusOne, Instant cursorCreatedAt, Long cursorId) {
+    public List<User> onlyTrashed(int limitPlusOne, Long cursorId) {
         // hanya yang soft-deleted
         disableSoftDeleteFilter();
         try {
-            if (cursorCreatedAt != null && cursorId != null) {
-                return find("deletedAt is not null and (createdAt > ?1 or (createdAt = ?1 and id > ?2)) order by createdAt asc, id asc", cursorCreatedAt, cursorId)
+            if (cursorId != null) {
+                return find("deletedAt is not null and id < ?1 order by id desc", cursorId)
                         .page(0, limitPlusOne).list();
             } else {
-                return find("deletedAt is not null order by createdAt asc, id asc").page(0, limitPlusOne).list();
+                return find("deletedAt is not null order by id desc").page(0, limitPlusOne).list();
             }
         } finally {
             enableSoftDeleteFilter();

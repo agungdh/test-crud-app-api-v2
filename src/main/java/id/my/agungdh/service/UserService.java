@@ -15,9 +15,7 @@ import jakarta.ws.rs.NotFoundException;
 import jakarta.ws.rs.WebApplicationException;
 import jakarta.ws.rs.core.Response;
 
-import java.nio.charset.StandardCharsets;
 import java.time.Instant;
-import java.util.Base64;
 import java.util.List;
 import java.util.UUID;
 
@@ -74,52 +72,50 @@ public class UserService {
     }
 
     // khusus get all include soft-deleted — tanpa param boolean
+    // Cursor = UUID, order by id DESC. Resolve UUID -> id, lalu query id < cursorId
     public PageResponse<UserResponse> listIncludingDeleted(int limit, String cursor) {
         int pageSize = Math.min(Math.max(limit, 1), 100);
-        Instant cursorCreatedAt = null;
         Long cursorId = null;
         if (cursor != null && !cursor.isBlank()) {
+            UUID cursorUuid;
             try {
-                String decoded = new String(Base64.getUrlDecoder().decode(cursor), StandardCharsets.UTF_8);
-                int sep = decoded.lastIndexOf(':');
-                if (sep == -1) throw new IllegalArgumentException("Invalid cursor format");
-                cursorCreatedAt = Instant.parse(decoded.substring(0, sep));
-                cursorId = Long.parseLong(decoded.substring(sep + 1));
-            } catch (Exception ex) {
+                cursorUuid = UUID.fromString(cursor);
+            } catch (IllegalArgumentException ex) {
                 throw new WebApplicationException("Invalid cursor", Response.Status.BAD_REQUEST);
             }
+            User cursorUser = repository.findByUuidIncludeDeleted(cursorUuid)
+                    .orElseThrow(() -> new WebApplicationException("Invalid cursor", Response.Status.BAD_REQUEST));
+            cursorId = cursorUser.id;
         }
-        List<User> rows = repository.findAllIncludingDeleted(pageSize + 1, cursorCreatedAt, cursorId);
+        List<User> rows = repository.findAllIncludingDeleted(pageSize + 1, cursorId);
         boolean hasNext = rows.size() > pageSize;
         List<User> pageRows = hasNext ? rows.subList(0, pageSize) : rows;
         List<UserResponse> data = pageRows.stream().map(this::toResponse).toList();
         String nextCursor = null;
         if (hasNext) {
             User last = pageRows.get(pageRows.size() - 1);
-            String raw = last.createdAt.toString() + ":" + last.id;
-            nextCursor = Base64.getUrlEncoder().withoutPadding().encodeToString(raw.getBytes(StandardCharsets.UTF_8));
+            nextCursor = last.uuid.toString();
         }
         return new PageResponse<>(data, nextCursor, hasNext);
     }
 
     public PageResponse<UserResponse> list(int limit, String cursor) {
         int pageSize = Math.min(Math.max(limit, 1), 100);
-        Instant cursorCreatedAt = null;
         Long cursorId = null;
 
         if (cursor != null && !cursor.isBlank()) {
+            UUID cursorUuid;
             try {
-                String decoded = new String(Base64.getUrlDecoder().decode(cursor), StandardCharsets.UTF_8);
-                int sep = decoded.lastIndexOf(':');
-                if (sep == -1) throw new IllegalArgumentException("Invalid cursor format");
-                cursorCreatedAt = Instant.parse(decoded.substring(0, sep));
-                cursorId = Long.parseLong(decoded.substring(sep + 1));
-            } catch (Exception ex) {
+                cursorUuid = UUID.fromString(cursor);
+            } catch (IllegalArgumentException ex) {
                 throw new WebApplicationException("Invalid cursor", Response.Status.BAD_REQUEST);
             }
+            User cursorUser = repository.findByUuid(cursorUuid)
+                    .orElseThrow(() -> new WebApplicationException("Invalid cursor", Response.Status.BAD_REQUEST));
+            cursorId = cursorUser.id;
         }
 
-        List<User> rows = repository.findAllActive(pageSize + 1, cursorCreatedAt, cursorId);
+        List<User> rows = repository.findAllActive(pageSize + 1, cursorId);
         boolean hasNext = rows.size() > pageSize;
         List<User> pageRows = hasNext ? rows.subList(0, pageSize) : rows;
 
@@ -128,8 +124,7 @@ public class UserService {
         String nextCursor = null;
         if (hasNext) {
             User last = pageRows.get(pageRows.size() - 1);
-            String raw = last.createdAt.toString() + ":" + last.id;
-            nextCursor = Base64.getUrlEncoder().withoutPadding().encodeToString(raw.getBytes(StandardCharsets.UTF_8));
+            nextCursor = last.uuid.toString();
         }
 
         return new PageResponse<>(data, nextCursor, hasNext);

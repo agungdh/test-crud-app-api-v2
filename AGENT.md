@@ -408,17 +408,23 @@ CREATE INDEX ix_products_created_at_active ON products(created_at) WHERE deleted
 
 *   Selalu sebut kolom, jangan `SELECT *`.
 *   Selalu `WHERE deleted_at IS NULL` (buat helper `whereActive()` di Repository).
-*   Gunakan `LIMIT` + `keyset pagination` untuk list, jangan `OFFSET` besar:
+*   Gunakan `LIMIT` + `keyset pagination` untuk list, jangan `OFFSET` besar. **Cursor = UUID, order by `id DESC` (id tidak pernah expose, internal):**
     ```sql
-    -- Keyset (cursor) — O(log n)
+    -- Step 1: resolve cursor UUID -> id
+    -- SELECT id FROM products WHERE uuid = :cursorUuid AND deleted_at IS NULL;
+    -- Step 2: keyset — O(log n), id DESC
     SELECT uuid, name FROM products
     WHERE deleted_at IS NULL
-      AND (created_at, id) > (:cursorCreatedAt, :cursorId)
-    ORDER BY created_at ASC, id ASC
+      AND id < :cursorId
+    ORDER BY id DESC
     LIMIT :pageSize;
+
+    -- Tanpa cursor (page pertama):
+    -- SELECT uuid, name FROM products WHERE deleted_at IS NULL ORDER BY id DESC LIMIT :pageSize;
 
     -- Jangan OFFSET 100000 — O(n)
     -- SELECT ... OFFSET 100000 LIMIT 20;
+    -- Jangan pakai (created_at, id) di cursor yang di-encode — akan bocorkan id internal.
     ```
 
 ### 10.2 INSERT
@@ -494,6 +500,7 @@ src/main/resources/
 *   [ ] Kolom `*_by` = `BIGINT NULL` tanpa `FOREIGN KEY`?
 *   [ ] Tidak ada `SELECT *` atau `OFFSET` besar?
 *   [ ] DTO pakai `record` dan tidak expose `id`/`fk_id` maupun kolom audit (`createdAt`, `updatedAt`, `deletedAt`, `*_by`)?
+*   [ ] Cursor pagination pakai `UUID`, `ORDER BY id DESC`, tidak bocorkan `id` internal (resolve `UUID -> id` dulu)?
 *   [ ] Semua `WHERE`/`JOIN` filter `deleted_at IS NULL`?
 *   [ ] `uuid` lookup pakai `= :uuid` (hash index terpakai)?
 *   [ ] `Resource`/`Service` I/O pakai `@RunOnVirtualThread`?
