@@ -61,26 +61,48 @@ public class UserService {
     }
 
     public UserResponse findByUuid(UUID uuid) {
-        return findByUuid(uuid, false);
-    }
-
-    public UserResponse findByUuid(UUID uuid, boolean includeDeleted) {
-        User user;
-        if (includeDeleted) {
-            user = repository.findByUuidIncludeDeleted(uuid)
-                    .orElseThrow(() -> new NotFoundException("User not found"));
-        } else {
-            user = repository.findByUuid(uuid)
-                    .orElseThrow(() -> new NotFoundException("User not found"));
-        }
+        User user = repository.findByUuid(uuid)
+                .orElseThrow(() -> new NotFoundException("User not found"));
         return toResponse(user);
     }
 
-    public PageResponse<UserResponse> list(int limit, String cursor) {
-        return list(limit, cursor, false);
+    // khusus untuk endpoint yang include soft-deleted
+    public UserResponse findByUuidIncludingDeleted(UUID uuid) {
+        User user = repository.findByUuidIncludeDeleted(uuid)
+                .orElseThrow(() -> new NotFoundException("User not found"));
+        return toResponse(user);
     }
 
-    public PageResponse<UserResponse> list(int limit, String cursor, boolean includeDeleted) {
+    // khusus get all include soft-deleted — tanpa param boolean
+    public PageResponse<UserResponse> listIncludingDeleted(int limit, String cursor) {
+        int pageSize = Math.min(Math.max(limit, 1), 100);
+        Instant cursorCreatedAt = null;
+        Long cursorId = null;
+        if (cursor != null && !cursor.isBlank()) {
+            try {
+                String decoded = new String(Base64.getUrlDecoder().decode(cursor), StandardCharsets.UTF_8);
+                int sep = decoded.lastIndexOf(':');
+                if (sep == -1) throw new IllegalArgumentException("Invalid cursor format");
+                cursorCreatedAt = Instant.parse(decoded.substring(0, sep));
+                cursorId = Long.parseLong(decoded.substring(sep + 1));
+            } catch (Exception ex) {
+                throw new WebApplicationException("Invalid cursor", Response.Status.BAD_REQUEST);
+            }
+        }
+        List<User> rows = repository.findAllIncludingDeleted(pageSize + 1, cursorCreatedAt, cursorId);
+        boolean hasNext = rows.size() > pageSize;
+        List<User> pageRows = hasNext ? rows.subList(0, pageSize) : rows;
+        List<UserResponse> data = pageRows.stream().map(this::toResponse).toList();
+        String nextCursor = null;
+        if (hasNext) {
+            User last = pageRows.get(pageRows.size() - 1);
+            String raw = last.createdAt.toString() + ":" + last.id;
+            nextCursor = Base64.getUrlEncoder().withoutPadding().encodeToString(raw.getBytes(StandardCharsets.UTF_8));
+        }
+        return new PageResponse<>(data, nextCursor, hasNext);
+    }
+
+    public PageResponse<UserResponse> list(int limit, String cursor) {
         int pageSize = Math.min(Math.max(limit, 1), 100);
         Instant cursorCreatedAt = null;
         Long cursorId = null;
@@ -97,9 +119,7 @@ public class UserService {
             }
         }
 
-        List<User> rows = includeDeleted
-                ? repository.findAllIncludingDeleted(pageSize + 1, cursorCreatedAt, cursorId)
-                : repository.findAllActive(pageSize + 1, cursorCreatedAt, cursorId);
+        List<User> rows = repository.findAllActive(pageSize + 1, cursorCreatedAt, cursorId);
         boolean hasNext = rows.size() > pageSize;
         List<User> pageRows = hasNext ? rows.subList(0, pageSize) : rows;
 

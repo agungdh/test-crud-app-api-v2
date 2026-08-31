@@ -33,22 +33,22 @@ public class UserResource {
     public PageResponse<UserResponse> list(
             @QueryParam("limit") @DefaultValue("20") int limit,
             @QueryParam("cursor") String cursor) {
-        return userService.list(limit, cursor, false);
+        return userService.list(limit, cursor);
     }
 
     @GET
     @Path("/{uuid}")
     public UserResponse getByUuid(@PathParam("uuid") UUID uuid) {
-        return userService.findByUuid(uuid, false);
+        return userService.findByUuid(uuid);
     }
 
-    // Endpoint khusus — include soft-deleted (tanpa query string, tanpa header)
+    // Endpoint khusus — include soft-deleted (tanpa param boolean)
     @GET
     @Path("/all")
     public PageResponse<UserResponse> listIncludingDeleted(
             @QueryParam("limit") @DefaultValue("20") int limit,
             @QueryParam("cursor") String cursor) {
-        return userService.list(limit, cursor, true);
+        return userService.listIncludingDeleted(limit, cursor);
     }
 
     @PUT
