@@ -4,18 +4,18 @@ import id.my.agungdh.dto.PageResponse;
 import id.my.agungdh.dto.UserCreateRequest;
 import id.my.agungdh.dto.UserResponse;
 import id.my.agungdh.dto.UserUpdateRequest;
-import id.my.agungdh.entity.UserRow;
+import id.my.agungdh.entity.User;
 import id.my.agungdh.repository.UserRepository;
+import id.my.agungdh.util.Argon2Hasher;
 import io.smallrye.common.annotation.RunOnVirtualThread;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
+import jakarta.transaction.Transactional;
 import jakarta.ws.rs.NotFoundException;
 import jakarta.ws.rs.WebApplicationException;
 import jakarta.ws.rs.core.Response;
-import id.my.agungdh.util.Argon2Hasher;
 
 import java.nio.charset.StandardCharsets;
-import java.sql.SQLException;
 import java.time.Instant;
 import java.util.Base64;
 import java.util.List;
@@ -28,36 +28,42 @@ public class UserService {
     @Inject
     UserRepository repository;
 
-    private UserResponse toResponse(UserRow row) {
-        return new UserResponse(row.uuid(), row.username(), row.name(), row.createdAt(), row.updatedAt());
+    private UserResponse toResponse(User u) {
+        return new UserResponse(u.uuid, u.username, u.name, u.createdAt, u.updatedAt);
     }
 
+    @Transactional
     public UserResponse create(UserCreateRequest req) {
-        // Check unique username
         if (repository.findByUsername(req.username()).isPresent()) {
             throw new WebApplicationException("Username already exists", Response.Status.CONFLICT);
         }
         String hash = Argon2Hasher.hash(req.password());
+        User user = new User();
+        user.username = req.username();
+        user.password = hash;
+        user.name = req.name();
+        // uuid and timestamps handled by @PrePersist
         try {
-            UserRow row = repository.insert(req.username(), hash, req.name(), null);
-            return toResponse(row);
+            repository.persist(user);
+            // flush to get generated id/uuid? uuid already set, id after persist
+            repository.flush();
         } catch (RuntimeException e) {
-            Throwable cause = e.getCause();
-            if (cause instanceof SQLException sqlEx && "23505".equals(sqlEx.getSQLState())) {
+            Throwable cause = findConstraintViolation(e);
+            if (cause != null && cause.getMessage() != null && cause.getMessage().contains("ux_users_username_active")) {
                 throw new WebApplicationException("Username already exists", Response.Status.CONFLICT);
             }
-            // Also check message contains duplicate key
             if (e.getMessage() != null && e.getMessage().contains("ux_users_username_active")) {
                 throw new WebApplicationException("Username already exists", Response.Status.CONFLICT);
             }
             throw e;
         }
+        return toResponse(user);
     }
 
     public UserResponse findByUuid(UUID uuid) {
-        UserRow row = repository.findByUuid(uuid)
+        User user = repository.findByUuid(uuid)
                 .orElseThrow(() -> new NotFoundException("User not found"));
-        return toResponse(row);
+        return toResponse(user);
     }
 
     public PageResponse<UserResponse> list(int limit, String cursor) {
@@ -77,54 +83,73 @@ public class UserService {
             }
         }
 
-        List<UserRow> rows = repository.findAll(pageSize, cursorCreatedAt, cursorId);
+        List<User> rows = repository.findAllActive(pageSize + 1, cursorCreatedAt, cursorId);
         boolean hasNext = rows.size() > pageSize;
-        List<UserRow> pageRows = hasNext ? rows.subList(0, pageSize) : rows;
+        List<User> pageRows = hasNext ? rows.subList(0, pageSize) : rows;
 
         List<UserResponse> data = pageRows.stream().map(this::toResponse).toList();
 
         String nextCursor = null;
         if (hasNext) {
-            UserRow last = pageRows.get(pageRows.size() - 1);
-            String raw = last.createdAt().toString() + ":" + last.id();
+            User last = pageRows.get(pageRows.size() - 1);
+            String raw = last.createdAt.toString() + ":" + last.id;
             nextCursor = Base64.getUrlEncoder().withoutPadding().encodeToString(raw.getBytes(StandardCharsets.UTF_8));
         }
 
         return new PageResponse<>(data, nextCursor, hasNext);
     }
 
+    @Transactional
     public UserResponse update(UUID uuid, UserUpdateRequest req) {
-        String passwordHash = null;
-        if (req.password() != null && !req.password().isBlank()) {
-            passwordHash = Argon2Hasher.hash(req.password());
-        }
+        User user = repository.findByUuid(uuid)
+                .orElseThrow(() -> new NotFoundException("User not found"));
 
-        // If username is being changed, check unique
         if (req.username() != null) {
             repository.findByUsername(req.username()).ifPresent(existing -> {
-                if (!existing.uuid().equals(uuid)) {
+                if (!existing.uuid.equals(uuid)) {
                     throw new WebApplicationException("Username already exists", Response.Status.CONFLICT);
                 }
             });
+            user.username = req.username();
         }
-
+        if (req.password() != null && !req.password().isBlank()) {
+            user.password = Argon2Hasher.hash(req.password());
+        }
+        if (req.name() != null) {
+            user.name = req.name();
+        }
+        // updatedAt handled by @PreUpdate, but force if needed
         try {
-            UserRow updated = repository.update(uuid, req.username(), passwordHash, req.name(), null)
-                    .orElseThrow(() -> new NotFoundException("User not found"));
-            return toResponse(updated);
+            repository.persist(user);
+            repository.flush();
         } catch (RuntimeException e) {
-            Throwable cause = e.getCause();
-            if (cause instanceof SQLException sqlEx && "23505".equals(sqlEx.getSQLState())) {
+            Throwable cause = findConstraintViolation(e);
+            if (cause != null && cause.getMessage() != null && cause.getMessage().contains("ux_users_username_active")) {
                 throw new WebApplicationException("Username already exists", Response.Status.CONFLICT);
             }
             throw e;
         }
+        return toResponse(user);
     }
 
+    @Transactional
     public void delete(UUID uuid) {
-        boolean deleted = repository.softDelete(uuid, null);
-        if (!deleted) {
-            throw new NotFoundException("User not found");
+        User user = repository.findByUuid(uuid)
+                .orElseThrow(() -> new NotFoundException("User not found"));
+        user.deletedAt = Instant.now();
+        user.updatedAt = Instant.now();
+        repository.persist(user);
+        repository.flush();
+    }
+
+    private Throwable findConstraintViolation(Throwable e) {
+        Throwable cur = e;
+        while (cur != null) {
+            if (cur.getClass().getSimpleName().contains("ConstraintViolation") || cur.getMessage() != null && cur.getMessage().contains("ux_users_username_active")) {
+                return cur;
+            }
+            cur = cur.getCause();
         }
+        return null;
     }
 }

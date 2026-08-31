@@ -23,6 +23,7 @@ dependencies {
     implementation("io.quarkus:quarkus-agroal")
     implementation("io.quarkus:quarkus-flyway")
     implementation("io.quarkus:quarkus-hibernate-validator")
+    implementation("io.quarkus:quarkus-hibernate-orm-panache")
     implementation("com.password4j:password4j:1.8.2")
     testImplementation("io.quarkus:quarkus-junit")
     testImplementation("io.rest-assured:rest-assured")

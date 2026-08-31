@@ -11,6 +11,10 @@ quarkus:
   flyway:
     migrate-at-start: true
     locations: db/migration
+  hibernate-orm:
+    physical-naming-strategy: org.hibernate.boot.model.naming.CamelCaseToUnderscoresNamingStrategy
+    schema-management:
+      strategy: none
   jackson:
     property-naming-strategy: SNAKE_CASE
     write-dates-as-timestamps: false
