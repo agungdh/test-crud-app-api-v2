@@ -5,7 +5,7 @@ CREATE TABLE users (
   id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
   uuid UUID NOT NULL DEFAULT gen_random_uuid(),
   username TEXT NOT NULL,
-  password_hash TEXT NOT NULL,
+  password TEXT NOT NULL,
   name TEXT NOT NULL,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   created_by BIGINT NULL,
