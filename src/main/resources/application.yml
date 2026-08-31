@@ -24,5 +24,11 @@ quarkus:
         level: INFO
   http:
     port: 8080
+  smallrye-openapi:
+    info-title: Test CRUD API
+    info-version: 0.0.6
+    info-description: CRUD User API with Quarkus
+  swagger-ui:
+    always-include: true
 
 # Virtual threads enabled via @RunOnVirtualThread - no extra config needed (defaults are sufficient)
