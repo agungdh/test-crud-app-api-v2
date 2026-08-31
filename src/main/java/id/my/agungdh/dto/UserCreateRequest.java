@@ -6,7 +6,7 @@ import org.eclipse.microprofile.openapi.annotations.media.Schema;
 
 @Schema(description = "Request to create a new user")
 public record UserCreateRequest(
-        @Schema(description = "Username", example = "johndoe", required = true) @NotBlank @Size(min = 3, max = 50) String username,
-        @Schema(description = "Password", example = "secret123", required = true) @NotBlank @Size(min = 6, max = 100) String password,
-        @Schema(description = "Full name", example = "John Doe", required = true) @NotBlank @Size(min = 1, max = 100) String name
+        @Schema(description = "Username", examples = "johndoe", required = true) @NotBlank @Size(min = 3, max = 50) String username,
+        @Schema(description = "Password", examples = "secret123", required = true) @NotBlank @Size(min = 6, max = 100) String password,
+        @Schema(description = "Full name", examples = "John Doe", required = true) @NotBlank @Size(min = 1, max = 100) String name
 ) {}

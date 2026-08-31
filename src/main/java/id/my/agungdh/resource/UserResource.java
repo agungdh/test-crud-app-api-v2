@@ -44,7 +44,7 @@ public class UserResource {
     @Operation(summary = "List users", description = "Cursor-based pagination, excludes soft-deleted")
     @APIResponse(responseCode = "200", description = "Paginated users")
     public PageResponse<UserResponse> list(
-            @Parameter(description = "Page size", example = "20") @QueryParam("limit") @DefaultValue("20") int limit,
+            @Parameter(description = "Page size", schema = @Schema(examples = "20")) @QueryParam("limit") @DefaultValue("20") int limit,
             @Parameter(description = "Cursor for next page") @QueryParam("cursor") String cursor) {
         return userService.list(limit, cursor);
     }
@@ -65,7 +65,7 @@ public class UserResource {
     @Operation(summary = "List users including soft-deleted")
     @APIResponse(responseCode = "200", description = "Paginated users including deleted")
     public PageResponse<UserResponse> listIncludingDeleted(
-            @Parameter(description = "Page size", example = "20") @QueryParam("limit") @DefaultValue("20") int limit,
+            @Parameter(description = "Page size", schema = @Schema(examples = "20")) @QueryParam("limit") @DefaultValue("20") int limit,
             @Parameter(description = "Cursor for next page") @QueryParam("cursor") String cursor) {
         return userService.listIncludingDeleted(limit, cursor);
     }

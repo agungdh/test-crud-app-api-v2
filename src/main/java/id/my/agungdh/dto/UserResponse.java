@@ -8,8 +8,8 @@ import java.util.UUID;
 @Schema(description = "User response")
 public record UserResponse(
         @Schema(description = "User UUID") UUID uuid,
-        @Schema(description = "Username", example = "johndoe") String username,
-        @Schema(description = "Full name", example = "John Doe") String name,
+        @Schema(description = "Username", examples = "johndoe") String username,
+        @Schema(description = "Full name", examples = "John Doe") String name,
         Instant createdAt,
         Instant updatedAt
 ) {}
