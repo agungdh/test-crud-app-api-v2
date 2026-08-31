@@ -1,6 +1,7 @@
 plugins {
     java
     id("io.quarkus")
+    id("docker")
 }
 
 repositories {
@@ -33,6 +34,3 @@ tasks.withType<JavaCompile> {
     options.encoding = "UTF-8"
     options.compilerArgs.add("-parameters")
 }
-
-// modular gradle scripts - keep build.gradle.kts slim
-apply(from = "gradle/docker.gradle.kts")

@@ -1,4 +1,5 @@
 pluginManagement {
+    includeBuild("build-logic")
     val quarkusPluginVersion = providers.gradleProperty("quarkusPluginVersion").get()
     val quarkusPluginId = providers.gradleProperty("quarkusPluginId").get()
     repositories {
