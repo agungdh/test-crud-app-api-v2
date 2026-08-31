@@ -23,7 +23,7 @@ dependencies {
 }
 
 group = "id.my.agungdh"
-version = "0.0.5"
+version = "0.0.6"
 
 java {
     sourceCompatibility = JavaVersion.VERSION_25
