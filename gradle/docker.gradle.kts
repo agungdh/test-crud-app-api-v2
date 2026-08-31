@@ -18,17 +18,6 @@ tasks.register<Exec>("composeLogs") {
 
 tasks.register<Exec>("minioInit") {
     group = "docker"
-    description = "Create MinIO bucket 'crud' (manual, auto already via minio-init service)"
+    description = "Create MinIO bucket 'crud'"
     commandLine("docker", "compose", "exec", "minio", "mcli", "mb", "--ignore-existing", "local/crud")
-}
-
-tasks.register<Exec>("minioInitLocal") {
-    group = "docker"
-    description = "Create MinIO bucket via one-off container (no need minio running via exec)"
-    commandLine(
-        "docker", "compose", "run", "--rm", "--no-deps",
-        "-e", "MINIO_ROOT_USER=admin",
-        "-e", "MINIO_ROOT_PASSWORD=admin123",
-        "minio-init"
-    )
 }
