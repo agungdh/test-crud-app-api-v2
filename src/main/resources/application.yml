@@ -26,7 +26,7 @@ quarkus:
     port: 8080
   smallrye-openapi:
     info-title: Test CRUD API
-    info-version: 0.0.6
+    info-version: 0.0.7
     info-description: CRUD User API with Quarkus
   swagger-ui:
     always-include: true
