@@ -1,7 +1,7 @@
 tasks.register<Exec>("composeUp") {
     group = "docker"
     description = "Start all docker-compose services"
-    commandLine("docker", "compose", "up", "-d")
+    commandLine("docker", "compose", "up", "-d", "--wait")
 }
 
 tasks.register<Exec>("composeDown") {
